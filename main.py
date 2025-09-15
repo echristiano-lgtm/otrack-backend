@@ -10,22 +10,27 @@ import xmltodict  # pip install xmltodict
 # ===============================
 app = FastAPI(title="MEOS Backend", version="1.2.0")
 
+
+# CORS (adição do regex opcional)
 ALLOWED_ORIGINS = os.environ.get(
     "MEOS_CORS_ORIGINS",
     "http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173",
 )
 origins = [o.strip() for o in ALLOWED_ORIGINS.split(",") if o.strip()]
+CORS_REGEX = os.environ.get("MEOS_CORS_REGEX")  # ex.: ^https://meos-frontend-.*\.vercel\.app$
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=CORS_REGEX,  # << novo (opcional)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# DATA_DIR (aceita DATA_DIR ou MEOS_DATA_DIR)
 BASE_DIR = os.getcwd()
-DATA_DIR = os.environ.get("MEOS_DATA_DIR", os.path.join(BASE_DIR, "data"))
+DATA_DIR = os.environ.get("MEOS_DATA_DIR") or os.environ.get("DATA_DIR") or os.path.join(BASE_DIR, "data")
 os.makedirs(DATA_DIR, exist_ok=True)
 
 # ===============================
@@ -462,3 +467,13 @@ async def import_event(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro no processamento: {e}")
+
+@app.head("/api/health")
+def health_head():
+    return {"ok": True}
+
+@app.get("/api/health")
+def health():
+    return {"ok": True, "version": app.version, "dataDir": DATA_DIR, "corsOrigins": origins}
+
+    
