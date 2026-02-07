@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import Dict, Any, List, Optional
 import hashlib, json, os, unicodedata
 import xmltodict  # pip install xmltodict
+from version import API_SCHEMA_VERSION, APP_VERSION
 
 # ===============================
 # App & CORS
@@ -369,9 +370,6 @@ def _merge_course_into_event(ev: Dict[str, Any], metrics: Dict[str, Dict[str, fl
 # ===============================
 # Rotas
 # ===============================
-@app.get("/api/health")
-def health():
-    return {"ok": True}
 
 @app.get("/api/events")
 def api_list():
@@ -472,8 +470,29 @@ async def import_event(
 def health_head():
     return {"ok": True}
 
+@app.head("/health")
+def health_root_head():
+    return {"ok": True}
+
 @app.get("/api/health")
 def health():
-    return {"ok": True, "version": app.version, "dataDir": DATA_DIR, "corsOrigins": origins}
+    payload = {
+        "ok": True,
+        "version": APP_VERSION,
+        "apiSchemaVersion": API_SCHEMA_VERSION,
+        "dataDir": DATA_DIR,
+        "corsOrigins": origins,
+    }
+    commit_sha = os.environ.get("GIT_SHA")
+    build_time = os.environ.get("BUILD_TIME")
+    if commit_sha:
+        payload["commitSha"] = commit_sha
+    if build_time:
+        payload["buildTime"] = build_time
+    return payload
+
+@app.get("/health")
+def health_root():
+    return health()
 
     
